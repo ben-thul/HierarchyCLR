@@ -5,21 +5,39 @@ using Microsoft.SqlServer.Types;
 
 public partial class UserDefinedFunctions
 {
+    private class ListAncestorsReturnType
+    {
+        public SqlHierarchyId Ancestor { get; }
+        public Byte RelativeLevel { get; }
+
+        public ListAncestorsReturnType(SqlHierarchyId ancestor, byte relativeLevel)
+        {
+            Ancestor = ancestor;
+            RelativeLevel = relativeLevel;
+        }
+    }
+
     [SqlFunction(
         FillRowMethodName = "FillRow_ListAncestors",
-        TableDefinition = "ancestor hierarchyid"
+        TableDefinition = "ancestor hierarchyid, relativeLevel tinyint"
         )]
     public static IEnumerable ListAncestors(SqlHierarchyId h)
     {
+        byte idx = 0;
         while (!h.IsNull)
         {
-            yield return (h);
+            ListAncestorsReturnType r = new ListAncestorsReturnType(h, idx);
+            yield return (r);
+
             h = h.GetAncestor(1);
+            idx++;
         }
     }
-    public static void FillRow_ListAncestors(Object obj, out SqlHierarchyId ancestor)
+    public static void FillRow_ListAncestors(Object obj, out SqlHierarchyId ancestor, out byte relativeLevel)
     {
-        ancestor = (SqlHierarchyId)obj;
-    }
+        ListAncestorsReturnType r = (ListAncestorsReturnType)obj;
 
+        ancestor = r.Ancestor;
+        relativeLevel = r.RelativeLevel;
+    }
 }
